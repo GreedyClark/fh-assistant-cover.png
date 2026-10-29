@@ -1,0 +1,24 @@
+experience:
+  level: новачок на фрілансі
+  it_background: 9 років в IT — підтримка користувачів, налаштування ПК, адміністрування Google Workspace, мережі MikroTik
+  education: магістр, Комп'ютерні науки; бакалавр, Кібербезпека
+
+languages: [українська, російська, англійська B1-B2]
+
+skills:
+  confident: [Python, aiogram 3, Django, SQLite, requests, BeautifulSoup, робота з REST API, APScheduler, Git]
+  basic: [asyncio, pytest, Bootstrap, Linux-сервер (Ubuntu, systemd), Google Cloud]
+  no: [React, Vue, мобільні застосунки, машинне навчання, PHP, WordPress]
+
+portfolio:
+  - name: Telegram-бот курсу валют НБУ
+    stack: aiogram 3, SQLite, APScheduler, API НБУ
+    did: курси 5 валют, конвертер з крос-курсами, графік курсу за N днів
+  - name: Fridge Recipe
+    stack: Django
+    did: облік продуктів у холодильнику, терміни придатності, підбір рецептів, список покупок, журнал калорій
+  - name: CashFlix
+    stack: Django
+    did: сімейний бюджет на кількох користувачів, рахунки за курсом НБУ, доходи й витрати, прогноз і аналітика
+
+profile_url: https://freelancehunt.com/freelancer/Enbya.html
