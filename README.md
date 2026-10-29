@@ -1,64 +1,75 @@
 # FH Assistant
 
-Особистий Telegram-бот для фрилансера на [Freelancehunt](https://freelancehunt.com). Кожні 7 хвилин забирає нові проєкти через API, відсіює зайве, оцінює решту від 0 до 100 і надсилає в Telegram. Для вибраного проєкту Claude рахує години й ціну та пише дві чернетки відповіді. Ставку можна подати з Mini App однією кнопкою після підтвердження.
+A personal Telegram bot for freelancers on [Freelancehunt](https://freelancehunt.com). Every 7 minutes it pulls new projects from the API, filters out the noise, scores the rest from 0 to 100 and sends them to Telegram. For a chosen project, Claude estimates the hours and price and writes two reply drafts. A bid can be submitted from the Mini App with one button after confirmation.
 
 ![FH Assistant](docs/cover.png)
 
-Скриншоти зроблено на демо-даних.
+## Screenshots
 
-## Можливості
+The interface is in Ukrainian. All screenshots use demo data.
 
-- **Моніторинг.** Опитування `/v2/projects` з наздоганянням пропущених сторінок після перезапуску, дедуплікація в SQLite, пауза з наростанням інтервалу при HTTP 429.
-- **Фільтри.** Навички, мінімальний бюджет у гривнях (інші валюти за курсом НБУ), стоп-слова, чорний список замовників, тихі години, пауза. Схожі проєкти з інших категорій теж потрапляють у стрічку, з позначкою.
-- **Оцінка.** Прозорі правила: збіг стеку, кількість ставок, свіжість, історія замовника, червоні прапорці («безкоштовне тестове», контакти поза біржею, мало деталей). Маркери 🔥 ‼️ ❌, слабкі проєкти приходять без звуку.
-- **Аналіз ставки.** Claude Haiku через tool use повертає структуровану відповідь: що зробити, години по підзадачах, ризики, питання замовнику, вердикт і дві чернетки. Ціну рахує код: години × запас × мінімальна ставка за годину, плюс медіана ринку за 30 днів. Текст оголошення в промпті позначено як недовірені дані.
-- **Подача ставки.** Форма в Mini App відправляє `POST /v2/projects/{id}/bids`. Перед відправкою перевіряє текст на контакти й суми (правила біржі), просить підтвердження, тримає денний ліміт.
-- **Журнал і статистика.** Статуси ставок, конверсія, точність оцінок часу, медіана бюджетів за навичками, години, коли з'являються підхожі проєкти.
-- **Heartbeat.** Повідомлення в Telegram, якщо Freelancehunt не приймає токен або опитування не працює 2 години. Пінг на healthchecks.io після кожного успішного опитування ловить повне падіння сервера.
+| Project feed | Project card | Bid analysis |
+|---|---|---|
+| ![Project feed](docs/projects.png) | ![Project card](docs/card.png) | ![Bid analysis](docs/analysis.png) |
 
-## Стек
+| Bid submission | Statistics |
+|---|---|
+| ![Bid submission](docs/send.png) | ![Statistics](docs/stats.png) |
 
-Python 3.12, aiogram 3, APScheduler, aiohttp, aiosqlite, pydantic-settings, Anthropic SDK. Mini App: Django 5.2 поверх тієї ж бази (unmanaged-моделі, WAL), gunicorn, whitenoise, без JS-фреймворків. Хостинг: Google Cloud e2-micro (free tier), systemd, Tailscale Funnel для HTTPS без домену.
+## Features
 
-## Структура
+- **Monitoring.** Polls `/v2/projects`, catches up on missed pages after a restart, deduplicates in SQLite and backs off with a growing pause on HTTP 429.
+- **Filters.** Skills, minimum budget in UAH (other currencies converted at the National Bank of Ukraine rate), stop words, a client blacklist, quiet hours and pause. Similar projects from other categories also reach the feed, with a label.
+- **Scoring.** Transparent rules: stack match, number of bids, freshness, client history and red flags such as "free test task", contacts outside the platform or a thin description. Markers 🔥 ‼️ ❌; weak projects arrive without sound.
+- **Bid analysis.** Claude Haiku returns a structured answer through tool use: what needs to be done, hours per subtask, risks, questions for the client, a verdict and two drafts. The price is calculated in code: hours × buffer × minimum hourly rate, plus the 30-day market median. The project text is marked as untrusted data in the prompt.
+- **Bid submission.** A Mini App form sends `POST /v2/projects/{id}/bids`. Before sending, it checks the text for contacts and amounts (both banned by the platform rules), asks for confirmation and enforces a daily limit.
+- **Bid log and statistics.** Bid statuses, conversion, accuracy of time estimates, median budgets per skill and the hours when matching projects appear.
+- **Heartbeat.** A Telegram alert when Freelancehunt rejects the token or polling has failed for 2 hours. A ping to healthchecks.io after every successful poll catches a full server outage.
+
+## Stack
+
+Python 3.12, aiogram 3, APScheduler, aiohttp, aiosqlite, pydantic-settings, Anthropic SDK. Mini App: Django 5.2 on the same database (unmanaged models, WAL), gunicorn, whitenoise, no JS frameworks. Hosting: Google Cloud e2-micro (free tier), systemd, Tailscale Funnel for HTTPS without a domain.
+
+## Project layout
 
 ```
-app/            бот: опитування, фільтри, оцінка, аналіз, сповіщення, команди
-  poller.py     цикл опитування і наздоганяння
-  scoring.py    правила оцінки (списки термінів у scoring_rules.py)
-  analysis.py   промпт і схема для Claude
-  pricing.py    розрахунок ціни
-  health.py     сповіщення про збої і healthchecks.io
-web/            Django Mini App (dashboard/: в'юхи, шаблони, статика)
-tests/          pytest без мережі й без реальних викликів Claude
-deploy/         systemd-юніти
-profile.yaml    досвід і навички для аналізу ставок
+app/            bot: polling, filters, scoring, analysis, notifications, commands
+  poller.py     polling loop and catch-up
+  scoring.py    scoring rules (term lists in scoring_rules.py)
+  analysis.py   prompt and schema for Claude
+  pricing.py    price calculation
+  health.py     failure alerts and healthchecks.io
+web/            Django Mini App (dashboard/: views, templates, static)
+tests/          pytest, no network and no real Claude calls
+deploy/         systemd units
+docs/           screenshots
+profile.yaml    experience and skills used in bid analysis
 ```
 
-## Встановлення
+## Installation
 
 ```bash
 git clone <repo> fh-assistant && cd fh-assistant
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-cp .env.example .env    # заповнити змінні нижче
+cp .env.example .env    # fill in the variables below
 .venv/bin/python -m app
 ```
 
-На Windows замість `.venv/bin/` пиши `.venv\Scripts\`.
+On Windows, use `.venv\Scripts\` instead of `.venv/bin/`.
 
-| Змінна | Що це |
+| Variable | Description |
 |---|---|
-| `FH_TOKEN` | токен API з налаштувань профілю Freelancehunt |
-| `BOT_TOKEN` | токен бота від @BotFather |
-| `ALLOWED_USER_ID` | твій Telegram ID, бот відповідає лише йому |
-| `ANTHROPIC_API_KEY` | ключ Claude API, без нього аналіз вимкнено |
-| `MINIAPP_URL` | HTTPS-адреса Mini App, без неї кнопки Mini App не з'являються |
-| `HEALTHCHECK_URL` | Ping URL з healthchecks.io, необов'язково |
+| `FH_TOKEN` | API token from your Freelancehunt profile settings |
+| `BOT_TOKEN` | bot token from @BotFather |
+| `ALLOWED_USER_ID` | your Telegram ID; the bot answers only you |
+| `ANTHROPIC_API_KEY` | Claude API key; without it, analysis is disabled |
+| `MINIAPP_URL` | HTTPS address of the Mini App; without it, Mini App buttons are hidden |
+| `HEALTHCHECK_URL` | Ping URL from healthchecks.io, optional |
 
-Решту налаштувань (навички, мінімальна ставка за годину, коефіцієнт запасу, ліміти) видно в `app/config.py`, їх теж можна перевизначити в `.env`. Поріг бюджету, стоп-слова й тихі години змінюються командами бота або в Mini App.
+Other settings (skills, minimum hourly rate, time buffer, limits) live in `app/config.py` and can also be overridden in `.env`. The budget threshold, stop words and quiet hours are changed with bot commands or in the Mini App.
 
-## Сервер
+## Server
 
 ```bash
 sudo cp deploy/fh-bot.service deploy/fh-web.service /etc/systemd/system/
@@ -69,25 +80,25 @@ sudo systemctl enable --now fh-bot fh-web
 sudo tailscale funnel --bg 8000
 ```
 
-Адресу з `tailscale funnel status` записати в `MINIAPP_URL` і перезапустити `fh-bot`. Бот сам поставить кнопку меню «Проєкти».
+Put the address from `tailscale funnel status` into `MINIAPP_URL` and restart `fh-bot`. The bot sets the "Проєкти" menu button itself.
 
-Оновлення: `git pull` (або розпакувати архів), потім `collectstatic` і `sudo systemctl restart fh-bot fh-web`. Логи: `journalctl -u fh-bot -f` і `logs/bot.log`.
+To update: `git pull`, then `collectstatic` and `sudo systemctl restart fh-bot fh-web`. Logs: `journalctl -u fh-bot -f` and `logs/bot.log`.
 
-## Тести
+## Tests
 
 ```bash
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/python -m pytest
 ```
 
-Покривають парсинг записаних відповідей API, фільтри, оцінку, дедуплікацію й наздоганяння, ціни й статистику, перевірку тексту ставки, heartbeat і основні сторінки Mini App. Мережа і Claude в тестах підмінені.
+The 52 tests cover parsing of recorded API responses, filters, scoring, deduplication and catch-up, pricing and statistics, bid text checks, the heartbeat and the main Mini App pages. The network and Claude are mocked.
 
-## Обмеження
+## Limitations
 
-- Бот працює для одного користувача.
-- Ставки подаються лише вручну, по одній, після підтвердження. Пункт 3.1.11 правил Freelancehunt забороняє інструменти автоматичного додавання ставок, тому масової чи автоматичної подачі тут немає.
-- Публічний список конкурсів в API зараз повертає 404, конкурси бот не відстежує.
+- The bot serves a single user.
+- Bids are submitted manually only, one at a time, after confirmation. Rule 3.1.11 of the Freelancehunt terms forbids tools for automatic bid placement, so there is no bulk or automatic submission.
+- The public contests list in the API currently returns 404, so the bot does not track contests.
 
-## Ліцензія
+## License
 
-Код відкритий для перегляду. Копіювання, зміна й використання без дозволу автора заборонені, деталі в `LICENSE`.
+The code is published for viewing only. Copying, modifying or using it without the author's permission is not allowed; see `LICENSE`.
